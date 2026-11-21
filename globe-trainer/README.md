@@ -4,23 +4,27 @@ A browser game for learning where every country is. It takes the hot-and-cold co
 
 ![Hunt mode](docs/hunt.png)
 
+<img src="docs/quiz.png" alt="Fact quiz on a phone" width="300">
+
 ## Modes
 
-**Hunt.** Guess the mystery country. Each guess is painted on the globe, hotter the closer it is, with:
+**Daily Hunt.** Guess today's mystery country. Each guess is painted on the globe, hotter the closer it is, with:
 - distance from the nearest border (not centre to centre), so neighbours read as "touching"
 - a compass arrow pointing towards the target
 - a proximity score
 - optional hints: region, size, first letter, capital
 
-Play the **Daily** country (same all day, streak tracked) or unlimited **Practice**, which picks targets from the region you choose.
+Once you find it, a four-question fact quiz: capital, population, language and currency, each multiple choice with nearby countries as the wrong answers. Your result (guesses plus quiz score) can be copied to share. After the daily is done you can play extra practice rounds.
 
-**Find it.** You get a country name and click it on the globe. A miss shows the country you clicked and how far and which way the target is. Three tries, then it's revealed.
+**Finder.** You get a country name and tap it on the globe. A miss shows the country you tapped and how far and which way the target is. Three tries, then it's revealed.
 
-**Name it.** The globe flies to a highlighted country and you name it. Typed answers by default; switch on multiple choice in settings for an easier version where the wrong options are nearby countries. "Show neighbours" labels the bordering countries as a clue.
+**Name.** The globe flies to a highlighted country and you name it. Typed answers by default; switch on multiple choice in settings for an easier version. "Show neighbours" labels the bordering countries as a clue.
 
-**Progress.** Mastery per skill for the current region, a mastery map coloured on the globe, your weakest countries, and Hunt stats.
+**Stats** (chart icon, top right): Daily Hunt record and streak, fact-quiz accuracy by question type, countries mastered per mode, and your weakest countries.
 
-After every round you get a fact card: flag, capital, region, area, languages, currency, and clickable neighbours to explore.
+After every round you get a fact card: flag, capital, population, region, area, languages, currency, and clickable neighbours to explore.
+
+On phones the country input opens a full-screen picker that sits above the keyboard, with large rows and flags.
 
 ## How the training works
 
@@ -62,6 +66,7 @@ npm run build    # static site in dist/, deployable anywhere (relative paths)
 Built by `npm run build:data` into `public/data/`:
 - Shapes: [world-atlas](https://github.com/topojson/world-atlas) 1:50m (Natural Earth, public domain). Somaliland and Northern Cyprus are merged into Somalia and Cyprus.
 - Country facts and alternate names: [world-countries](https://github.com/mledoze/countries) (ODbL).
+- Population: World Bank 2018 figures via [country-json](https://github.com/samayo/country-json) (MIT), plus Kosovo and Taiwan added by hand.
 - The core pool is the 193 UN members plus Vatican City, Palestine, Kosovo and Taiwan. Tuvalu isn't in the 1:50m shapes, so it's drawn as a dot.
 
 ## Code map
@@ -73,5 +78,7 @@ Built by `npm run build:data` into `public/data/`:
 | `src/globe.js` | Canvas orthographic globe: drag, zoom, pinch, click to pick, fly-to |
 | `src/search.js` | Accent-insensitive name matching and autocomplete |
 | `src/progress.js` | Stats, daily puzzle, streaks, spaced repetition |
-| `src/modes/*` | The four modes |
+| `src/quiz.js` | Builds the post-hunt fact quiz |
+| `src/stats.js` | Stats dialog |
+| `src/modes/*` | Daily Hunt, Finder, Name |
 | `scripts/build-data.mjs` | Generates `public/data/` |

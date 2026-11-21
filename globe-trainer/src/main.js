@@ -6,9 +6,9 @@ import { Progress } from './progress.js';
 import { HuntMode } from './modes/hunt.js';
 import { LocateMode } from './modes/locate.js';
 import { NameMode } from './modes/name.js';
-import { ProgressMode } from './modes/progress-view.js';
+import { renderStats } from './stats.js';
 
-const MODES = { hunt: HuntMode, locate: LocateMode, name: NameMode, progress: ProgressMode };
+const MODES = { hunt: HuntMode, locate: LocateMode, name: NameMode };
 const DEFAULT_SETTINGS = {
   region: 'world',
   territories: false,
@@ -104,7 +104,37 @@ async function start() {
     if (JSON.stringify(settings) !== before) current?.onSettingsChange?.();
   });
 
-  switchMode(progress.getSetting('mode', 'hunt'));
+  // Stats dialog
+  const statsDialog = document.getElementById('stats');
+  const statsRoot = document.getElementById('stats-content');
+  let statsSkill = progress.getSetting('progressSkill', 'locate');
+  const drawStats = () =>
+    renderStats(app, statsRoot, {
+      skill: statsSkill,
+      onSkill: (k) => {
+        statsSkill = k;
+        progress.setSetting('progressSkill', k);
+        drawStats();
+      },
+      onCountry: (c) => {
+        statsDialog.close();
+        globe.flyToCountry(c);
+      },
+    });
+  document.getElementById('stats-btn').addEventListener('click', () => {
+    drawStats();
+    statsDialog.showModal();
+  });
+  statsDialog.querySelector('[data-close]').addEventListener('click', () => statsDialog.close());
+  for (const d of [statsDialog, dialog]) {
+    // Tap the backdrop to close.
+    d.addEventListener('click', (e) => {
+      if (e.target === d) d.close();
+    });
+  }
+
+  const saved = progress.getSetting('mode', 'hunt');
+  switchMode(MODES[saved] ? saved : 'hunt');
 }
 
 // Offline support and "Add to Home Screen" (production builds only).

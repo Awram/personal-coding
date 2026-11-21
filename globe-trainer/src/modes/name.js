@@ -22,6 +22,7 @@ export class NameMode {
 
   unmount() {
     document.removeEventListener('keydown', this.onKey);
+    this.ac?.destroy();
   }
 
   onSettingsChange() {
@@ -127,11 +128,13 @@ export class NameMode {
     const t = this.target;
     const card = progress.card('name', t.id);
     const s = this.session;
+    this.ac?.destroy();
+    this.ac = null;
     this.panel.innerHTML = '';
     const main = h(`
       <div class="card">
         <div class="row between">
-          <span class="muted small">Name it · ${esc(this.app.regionLabel())}</span>
+          <span class="muted small">Name · ${esc(this.app.regionLabel())}</span>
           <span class="attempts" title="Tries left">${Array.from({ length: MAX_TRIES }, (_, i) => `<span class="${i < this.wrong.length ? 'used' : ''}"></span>`).join('')}</span>
         </div>
         <div class="prompt">${this.done ? `<span class="flag">${t.flag || ''}</span>${esc(t.name)}` : 'Which country is highlighted?'}</div>
@@ -161,9 +164,14 @@ export class NameMode {
         });
         slot.append(grid);
       } else {
-        this.ac = autocomplete({ index: this.app.index, placeholder: 'Name this country…', onSubmit: (c, raw) => this.answer(c, raw) });
+        this.ac = autocomplete({
+          index: this.app.index,
+          placeholder: 'Name this country…',
+          exclude: this.wrong.map((w) => w.id),
+          onSubmit: (c, raw) => this.answer(c, raw),
+        });
         slot.append(this.ac.el);
-        setTimeout(() => this.ac.focus(), 0);
+        setTimeout(() => this.ac?.autofocus(), 0);
       }
     } else {
       slot.remove();

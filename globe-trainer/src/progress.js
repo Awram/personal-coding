@@ -5,7 +5,7 @@ const DAY = 24 * 60 * 60 * 1000;
 // How long to wait before a country comes back, per box.
 const BOX_INTERVALS = [0, 10 * 60 * 1000, DAY, 3 * DAY, 7 * DAY, 21 * DAY];
 export const MAX_BOX = BOX_INTERVALS.length - 1;
-export const SKILLS = ['locate', 'name', 'hunt'];
+export const SKILLS = ['locate', 'name', 'hunt', 'facts'];
 
 function emptyState() {
   return {
@@ -13,6 +13,7 @@ function emptyState() {
     hunt: { played: 0, won: 0, guesses: 0, best: null, history: [] },
     daily: {}, // date -> { id, guesses, done, hints, list }
     streak: { current: 0, best: 0, lastDate: null },
+    quiz: {}, // question type -> { asked, correct }
     settings: {},
   };
 }
@@ -137,6 +138,13 @@ export class Progress {
     // Hunting a country quickly says you know where it sits relative to others.
     const q = !won ? 0 : guesses <= 4 && !hintsUsed ? 2 : 1;
     this.record('hunt', id, q);
+    this.save();
+  }
+
+  recordQuiz(type, correct) {
+    const q = (this.state.quiz[type] ||= { asked: 0, correct: 0 });
+    q.asked += 1;
+    if (correct) q.correct += 1;
     this.save();
   }
 

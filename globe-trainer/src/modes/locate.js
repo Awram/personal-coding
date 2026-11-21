@@ -126,7 +126,7 @@ export class LocateMode {
     const main = h(`
       <div class="card">
         <div class="row between">
-          <span class="muted small">Find it · ${esc(this.app.regionLabel())}</span>
+          <span class="muted small">Finder · ${esc(this.app.regionLabel())}</span>
           <span class="attempts" title="Tries left">${Array.from({ length: MAX_TRIES }, (_, i) => `<span class="${i < this.misses.length ? 'used' : ''}"></span>`).join('')}</span>
         </div>
         <div class="prompt">${esc(t.name)}</div>
