@@ -37,6 +37,7 @@ button, input, select { font: inherit; color: inherit; }
   position: sticky;
   top: 0;
   z-index: 5;
+  padding-top: max(10px, env(safe-area-inset-top));
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; white-space: nowrap; }
 .logo { font-size: 22px; }

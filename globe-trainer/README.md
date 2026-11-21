@@ -33,6 +33,18 @@ Every country has a Leitner box per skill (Find it, Name it, Hunt). Getting it r
 - Borders, small-country dots and labels on the globe
 - Kilometres or miles
 
+## Play on your phone
+
+The app is deployed to GitHub Pages by `.github/workflows/globe-trainer-pages.yml` on every push to `main` that touches `globe-trainer/`:
+
+**https://awram.github.io/personal-coding/**
+
+Add it to your home screen and it opens full screen like an app and works offline after the first visit:
+- **iPhone (Safari):** Share button, then "Add to Home Screen"
+- **Android (Chrome):** menu, then "Add to Home screen" or "Install app"
+
+One-time setup in the repo: Settings > Pages > Source: **GitHub Actions**.
+
 ## Run it
 
 Requires Node 18+.

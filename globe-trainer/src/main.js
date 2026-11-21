@@ -107,6 +107,11 @@ async function start() {
   switchMode(progress.getSetting('mode', 'hunt'));
 }
 
+// Offline support and "Add to Home Screen" (production builds only).
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}
+
 start().catch((err) => {
   console.error(err);
   const el = document.getElementById('loading');
