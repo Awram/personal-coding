@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Learn where every country is with a spinning globe, hot-and-cold guessing and spaced repetition." />
+    <title>Globe Trainer</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">🌍</span>
+        <span>Globe Trainer</span>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="Game modes">
+        <button role="tab" data-mode="hunt" aria-selected="true">Hunt</button>
+        <button role="tab" data-mode="locate">Find it</button>
+        <button role="tab" data-mode="name">Name it</button>
+        <button role="tab" data-mode="progress">Progress</button>
+      </nav>
+      <button class="icon-btn" id="settings-btn" aria-label="Settings" title="Settings">⚙</button>
+    </header>
+
+    <main class="layout">
+      <section class="globe-wrap" aria-label="Globe">
+        <canvas id="globe"></canvas>
+        <div class="globe-controls">
+          <button class="icon-btn" data-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+          <button class="icon-btn" data-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
+          <button class="icon-btn" data-zoom="reset" aria-label="Reset view" title="Reset view">⟲</button>
+        </div>
+        <div class="loading" id="loading">Loading the world…</div>
+      </section>
+      <section class="panel" id="panel" aria-live="polite"></section>
+    </main>
+
+    <dialog id="settings">
+      <form method="dialog" class="settings-form">
+        <h2>Settings</h2>
+        <label>Countries to practise
+          <select name="region"></select>
+        </label>
+        <label class="check"><input type="checkbox" name="territories" /> Include territories and dependencies (Greenland, Puerto Rico…)</label>
+        <label class="check"><input type="checkbox" name="borders" /> Show country borders on the globe</label>
+        <label class="check"><input type="checkbox" name="tinyDots" /> Show dots for small countries</label>
+        <label class="check"><input type="checkbox" name="labels" /> Label countries on the globe</label>
+        <label class="check"><input type="checkbox" name="choices" /> Name it: multiple choice (easier)</label>
+        <label>Distance units
+          <select name="units"><option value="km">Kilometres</option><option value="mi">Miles</option></select>
+        </label>
+        <p class="muted small">The region filter applies to practice targets in every mode. The daily Hunt always uses the whole world.</p>
+        <div class="row end">
+          <button value="close" class="btn primary">Done</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
