@@ -56,11 +56,18 @@
         <label class="check"><input type="checkbox" name="borders" /> Show country borders on the globe</label>
         <label class="check"><input type="checkbox" name="tinyDots" /> Show dots for small countries</label>
         <label class="check"><input type="checkbox" name="labels" /> Label countries on the globe</label>
-        <label class="check"><input type="checkbox" name="choices" /> Name it: multiple choice (easier)</label>
+        <label class="check"><input type="checkbox" name="choices" /> Name mode: multiple choice (easier)</label>
         <label>Distance units
           <select name="units"><option value="km">Kilometres</option><option value="mi">Miles</option></select>
         </label>
-        <p class="muted small">The region filter applies to practice targets in every mode. The daily Hunt always uses the whole world.</p>
+        <p class="muted small">The region filter applies to Finder and Name. The Daily Hunt always uses the whole world.</p>
+        <div class="danger-zone">
+          <div>
+            <strong>Reset history</strong>
+            <p class="muted small">Clears your scores, streaks, quiz results and learning progress on this device and starts you over as a new player. Display settings are kept.</p>
+          </div>
+          <button type="button" class="btn danger" id="reset-history">Reset history</button>
+        </div>
         <div class="row end">
           <button value="close" class="btn primary">Done</button>
         </div>

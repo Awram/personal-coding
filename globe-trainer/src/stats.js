@@ -94,16 +94,5 @@ export function renderStats(app, root, { onCountry, skill = 'locate', onSkill } 
   });
   root.append(weakSec);
 
-  const danger = h(`<section class="row between">
-      <span class="muted small">Progress is saved on this device only.</span>
-      <button type="button" class="btn ghost small" data-act="reset">Reset progress</button>
-    </section>`);
-  danger.querySelector('[data-act="reset"]').addEventListener('click', () => {
-    if (!confirm('Delete all saved progress and stats? This cannot be undone.')) return;
-    const settings = progress.getSetting('app', {});
-    progress.reset();
-    progress.setSetting('app', settings);
-    renderStats(app, root, { onCountry, skill, onSkill });
-  });
-  root.append(danger);
+  root.append(h(`<p class="muted small" style="margin:0">History is saved on this device. To start over, use Reset history in settings.</p>`));
 }

@@ -101,6 +101,17 @@ async function start() {
     }
     dialog.showModal();
   });
+  form.querySelector('#reset-history').addEventListener('click', () => {
+    const msg = 'Reset all history? Your scores, streaks and progress on this device will be deleted and you will start over as a new player. This cannot be undone.';
+    if (!confirm(msg)) return;
+    progress.reset();
+    progress.setSetting('app', settings);
+    dialog.close();
+    refreshLocks();
+    switchMode('hunt');
+    toast('History cleared. Welcome back to day one.');
+  });
+
   dialog.addEventListener('close', () => {
     const before = JSON.stringify(settings);
     for (const k of Object.keys(DEFAULT_SETTINGS)) {
@@ -145,6 +156,9 @@ async function start() {
   const saved = progress.getSetting('mode', 'hunt');
   switchMode(MODES[saved] ? saved : 'hunt');
 }
+
+// Ask the browser not to clear saved history when storage runs low.
+navigator.storage?.persist?.().catch(() => {});
 
 // Offline support and "Add to Home Screen" (production builds only).
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

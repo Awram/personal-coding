@@ -302,7 +302,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
 .dialog-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; max-height: calc(100vh - 64px); overflow-y: auto; }
 .dialog-body section { border-top: 1px solid var(--line); padding-top: 12px; }
 .dialog-body section h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.settings-form { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.settings-form { max-height: calc(100dvh - 48px); overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
 .settings-form h2 { margin: 0; }
 .settings-form label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 .settings-form label.check { flex-direction: row; align-items: flex-start; gap: 8px; }
@@ -363,3 +363,10 @@ body.locked .top-actions { display: none; }
 .dist-row { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: center; font-size: 13px; }
 .dist-row .fill { background: var(--card-2); border-radius: 4px; padding: 2px 6px; text-align: right; min-width: 22px; font-weight: 600; }
 .dist-row .fill.best { background: var(--accent); color: var(--accent-ink); }
+
+.danger-zone { border-top: 1px solid var(--line); padding-top: 12px; display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.danger-zone p { margin: 4px 0 0; }
+.btn.danger { background: none; border-color: var(--bad); color: var(--bad); white-space: nowrap; }
+@media (max-width: 520px) {
+  .danger-zone { flex-direction: column; align-items: stretch; }
+}
