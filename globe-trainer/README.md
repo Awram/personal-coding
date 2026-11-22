@@ -8,13 +8,18 @@ A browser game for learning where every country is. It takes the hot-and-cold co
 
 ## Modes
 
-**Daily Hunt.** Guess today's mystery country. Each guess is painted on the globe, hotter the closer it is, with:
-- distance from the nearest border (not centre to centre), so neighbours read as "touching"
+**Daily Hunt.** One mystery country a day. New players start here with nothing else on screen; finishing your first daily unlocks Finder, Name, stats and settings.
+
+Each guess is painted on the globe, hotter the closer it is, and listed right under the input (closest first, latest marked) with:
+- distance from the nearest border (not centre to centre), so neighbours show as "borders"
 - a compass arrow pointing towards the target
 - a proximity score
-- optional hints: region, size, first letter, capital
 
-Once you find it, a four-question fact quiz: capital, population, language and currency, each multiple choice with nearby countries as the wrong answers. Your result (guesses plus quiz score) can be copied to share. After the daily is done you can play extra practice rounds.
+Hints (region, size, first letter) cost 2 each. **Score = guesses + 2 per hint, lower is better.** Your best score and score distribution are in stats.
+
+**Streak:** it grows each day you find the country, however many guesses or hints it takes. Giving up or missing a day resets it to 0. (Finding it with hints still counts because the score already rewards doing it unassisted; the streak is about showing up and finishing.)
+
+Once you find it, a four-question fact quiz: capital, population, language and currency, each multiple choice with nearby countries as the wrong answers. "Copy result" shares your score, streak and quiz result.
 
 **Finder.** You get a country name and tap it on the globe. A miss shows the country you tapped and how far and which way the target is. Three tries, then it's revealed.
 

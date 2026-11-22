@@ -53,9 +53,17 @@ async function start() {
     pool: () => world.pool({ region: settings.region, includeTerritories: settings.territories }),
     regionLabel: () => REGIONS.find((r) => r.id === settings.region)?.label ?? 'Whole world',
     switchMode,
+    refreshLocks,
   };
 
+  // New players see only the Daily Hunt. Finishing a daily unlocks the other modes,
+  // stats and settings.
+  function refreshLocks() {
+    document.body.classList.toggle('locked', !progress.isUnlocked());
+  }
+
   function switchMode(name) {
+    if (!progress.isUnlocked()) name = 'hunt';
     current?.unmount?.();
     panel.innerHTML = '';
     globe.setStyles(new Map());
@@ -133,6 +141,7 @@ async function start() {
     });
   }
 
+  refreshLocks();
   const saved = progress.getSetting('mode', 'hunt');
   switchMode(MODES[saved] ? saved : 'hunt');
 }

@@ -152,17 +152,56 @@ export class Progress {
     return this.state.daily[date];
   }
 
+  /**
+   * Save a daily result. Streak rule: finding the country (any number of guesses or
+   * hints) on its day keeps the streak going. Giving up or skipping a day resets it.
+   */
   setDaily(date, data) {
+    const wasDone = this.state.daily[date]?.done;
     this.state.daily[date] = data;
-    if (data.done && data.won) {
+    if (data.done && !wasDone) {
       const s = this.state.streak;
-      if (s.lastDate !== date) {
+      if (data.won) {
         s.current = s.lastDate === previousDate(date) ? s.current + 1 : 1;
         s.best = Math.max(s.best, s.current);
         s.lastDate = date;
+      } else {
+        s.current = 0;
+        s.lastDate = null;
       }
     }
     this.save();
+  }
+
+  /** Streak as of `today`: it lapses if neither today nor yesterday was solved. */
+  currentStreak(today = todayKey()) {
+    const s = this.state.streak;
+    return s.lastDate === today || s.lastDate === previousDate(today) ? s.current : 0;
+  }
+
+  /** The other modes open up once the first daily is finished. */
+  isUnlocked() {
+    return Object.values(this.state.daily).some((d) => d.done);
+  }
+
+  /** Summary of every finished daily, for the stats panel. */
+  dailyStats() {
+    const done = Object.values(this.state.daily).filter((d) => d.done);
+    const won = done.filter((d) => d.won);
+    const scores = won.map((d) => huntScore(d.list.length, (d.hints || []).length));
+    const dist = new Map();
+    for (const sc of scores) {
+      const bucket = Math.min(sc, 10);
+      dist.set(bucket, (dist.get(bucket) || 0) + 1);
+    }
+    return {
+      played: done.length,
+      won: won.length,
+      best: scores.length ? Math.min(...scores) : null,
+      average: scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
+      unassisted: won.filter((d) => !(d.hints || []).length).length,
+      distribution: dist,
+    };
   }
 
   getSetting(k, fallback) {
@@ -178,6 +217,14 @@ export class Progress {
     this.state = emptyState();
     this.save();
   }
+}
+
+/** Each hint costs this many guesses in your score. */
+export const HINT_COST = 2;
+
+/** Daily Hunt score: lower is better. Guesses plus a penalty per hint. */
+export function huntScore(guesses, hints) {
+  return guesses + HINT_COST * hints;
 }
 
 export function todayKey(d = new Date()) {

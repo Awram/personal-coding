@@ -56,3 +56,41 @@ describe('daily', () => {
     expect(p.state.streak.current).toBe(1);
   });
 });
+
+describe('daily scoring and streaks', () => {
+  it('scores guesses plus two per hint', async () => {
+    const { huntScore } = await import('../src/progress.js');
+    expect(huntScore(4, 0)).toBe(4);
+    expect(huntScore(4, 2)).toBe(8);
+  });
+
+  it('giving up resets the streak, and it lapses after a missed day', () => {
+    const p = new Progress(mem());
+    p.setDaily('2026-03-01', { done: true, won: true, list: ['A'], hints: [] });
+    p.setDaily('2026-03-02', { done: true, won: true, list: ['A', 'B'], hints: ['region'] });
+    expect(p.currentStreak('2026-03-02')).toBe(2);
+    expect(p.currentStreak('2026-03-03')).toBe(2);
+    expect(p.currentStreak('2026-03-04')).toBe(0);
+    p.setDaily('2026-03-03', { done: true, won: false, list: ['A'], hints: [] });
+    expect(p.currentStreak('2026-03-03')).toBe(0);
+    expect(p.state.streak.best).toBe(2);
+  });
+
+  it('saving the same day twice does not double count', () => {
+    const p = new Progress(mem());
+    p.setDaily('2026-03-01', { done: true, won: true, list: ['A'], hints: [] });
+    p.setDaily('2026-03-01', { done: true, won: true, list: ['A'], hints: [], quiz: {} });
+    expect(p.state.streak.current).toBe(1);
+  });
+
+  it('summarises dailies and unlocks after the first', () => {
+    const p = new Progress(mem());
+    expect(p.isUnlocked()).toBe(false);
+    p.setDaily('2026-03-01', { done: true, won: true, list: ['A', 'B', 'C'], hints: [] });
+    p.setDaily('2026-03-02', { done: true, won: true, list: ['A', 'B'], hints: ['size'] });
+    p.setDaily('2026-03-03', { done: true, won: false, list: ['A'], hints: [] });
+    const s = p.dailyStats();
+    expect(p.isUnlocked()).toBe(true);
+    expect(s).toMatchObject({ played: 3, won: 2, best: 3, average: 3.5, unassisted: 1 });
+  });
+});

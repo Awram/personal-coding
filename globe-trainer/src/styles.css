@@ -338,3 +338,28 @@ kbd { background: var(--bg-2); border: 1px solid var(--line); border-radius: 4px
   .stats .num { font-size: 19px; }
   .brand { flex: 1; }
 }
+
+/* Locked until the first daily is finished */
+body.locked .tabs,
+body.locked .top-actions { display: none; }
+
+/* Daily Hunt */
+.hunt-foot { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.guess.latest { box-shadow: inset 4px 0 0 var(--accent); background: var(--card-2); }
+.guess-details { padding: 10px 14px; }
+.guess-details summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: 14px; }
+.guess-details[open] summary { margin-bottom: 10px; }
+.score-row { display: flex; align-items: center; gap: 14px; }
+.big-score { font-size: 46px; font-weight: 800; line-height: 1; color: var(--accent); min-width: 56px; text-align: center; }
+.score-title { font-size: 18px; font-weight: 700; }
+.mini-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; margin-top: 14px; text-align: center; }
+.mini-stats div { background: var(--bg-2); border-radius: 10px; padding: 8px 4px; display: flex; flex-direction: column; }
+.mini-stats b { font-size: 20px; }
+.mini-stats span { font-size: 11px; color: var(--muted); }
+.unlock { border-color: var(--accent); }
+.unlock h2 { color: var(--accent); }
+.unlock .btn { flex: 1; min-width: 150px; }
+.dist { display: flex; flex-direction: column; gap: 4px; }
+.dist-row { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: center; font-size: 13px; }
+.dist-row .fill { background: var(--card-2); border-radius: 4px; padding: 2px 6px; text-align: right; min-width: 22px; font-weight: 600; }
+.dist-row .fill.best { background: var(--accent); color: var(--accent-ink); }

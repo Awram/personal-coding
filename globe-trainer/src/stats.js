@@ -8,20 +8,33 @@ const SKILL_LABELS = { hunt: 'Daily Hunt', locate: 'Finder', name: 'Name', facts
 export function renderStats(app, root, { onCountry, skill = 'locate', onSkill } = {}) {
   const { progress } = app;
   const pool = app.pool();
-  const hunt = progress.state.hunt;
   const streak = progress.state.streak;
   root.innerHTML = '';
 
-  const avg = hunt.won ? (hunt.guesses / hunt.won).toFixed(1) : '-';
+  const d = progress.dailyStats();
+  const dist = [...Array(10).keys()].map((i) => i + 1);
+  const maxCount = Math.max(1, ...d.distribution.values());
   root.append(
     h(`<section>
         <h3>Daily Hunt</h3>
         <div class="stats">
-          <div><div class="num">${hunt.played}</div><div class="lbl">Played</div></div>
-          <div><div class="num">${hunt.played ? Math.round((100 * hunt.won) / hunt.played) : 0}%</div><div class="lbl">Found</div></div>
-          <div><div class="num">${avg}</div><div class="lbl">Avg guesses</div></div>
-          <div><div class="num">${streak.current}</div><div class="lbl">Streak</div></div>
+          <div><div class="num">${d.played}</div><div class="lbl">Played</div></div>
+          <div><div class="num">${d.best ?? '-'}</div><div class="lbl">Best score</div></div>
+          <div><div class="num">${progress.currentStreak()}</div><div class="lbl">Streak</div></div>
+          <div><div class="num">${streak.best}</div><div class="lbl">Best streak</div></div>
         </div>
+        <p class="muted small">Score = guesses + 2 per hint, lower is better. Found ${d.won} of ${d.played}${d.average ? `, average ${d.average.toFixed(1)}` : ''}, ${d.unassisted} without hints. Your streak grows each day you find the country; giving up or missing a day resets it.</p>
+        ${
+          d.won
+            ? `<div class="dist">${dist
+                .map((sc) => {
+                  const c = d.distribution.get(sc) || 0;
+                  return `<div class="dist-row"><span class="muted">${sc === 10 ? '10+' : sc}</span>
+                    <span><span class="fill ${sc === Math.min(d.best, 10) ? 'best' : ''}" style="display:inline-block;width:${Math.max(6, (100 * c) / maxCount)}%">${c}</span></span></div>`;
+                })
+                .join('')}</div>`
+            : ''
+        }
       </section>`),
   );
 
@@ -44,7 +57,7 @@ export function renderStats(app, root, { onCountry, skill = 'locate', onSkill } 
       <div class="legend"><span><i style="background:#2fb872"></i>Mastered</span><span><i style="background:#ffd166"></i>Learning</span><span><i style="background:var(--bg-2)"></i>Not seen</span></div>
     </section>`);
   const skills = mastery.querySelector('.skills');
-  for (const k of ['locate', 'name', 'hunt']) {
+  for (const k of ['locate', 'name']) {
     const s = progress.summary(k, pool);
     const pct = (n) => (100 * n) / Math.max(1, s.total);
     skills.append(
@@ -64,7 +77,7 @@ export function renderStats(app, root, { onCountry, skill = 'locate', onSkill } 
       <div class="row between">
         <h3 style="margin:0">Needs work</h3>
         <div class="seg" role="group" aria-label="Skill">
-          ${['locate', 'name', 'hunt'].map((k) => `<button type="button" data-skill="${k}" aria-pressed="${k === skill}">${SKILL_LABELS[k]}</button>`).join('')}
+          ${['locate', 'name'].map((k) => `<button type="button" data-skill="${k}" aria-pressed="${k === skill}">${SKILL_LABELS[k]}</button>`).join('')}
         </div>
       </div>
       <div class="weak-list" style="margin-top:10px"></div>

@@ -1,8 +1,9 @@
-// Daily Hunt: guess the mystery country. Each guess is coloured by how close it is,
-// with distance, compass direction and a proximity score. Once found, a short quiz
-// on its capital, population, language and currency.
+// Daily Hunt: one mystery country a day. Each guess is coloured by how close it is,
+// with distance, compass direction and a proximity score. Score = guesses plus a
+// penalty per hint (lower is better). Once found, a short quiz on its capital,
+// population, language and currency.
 import { heatColor, proximity, compassPoint } from '../geo.js';
-import { dailyPick, todayKey } from '../progress.js';
+import { dailyPick, todayKey, huntScore, HINT_COST } from '../progress.js';
 import { buildQuiz, QUIZ_LABELS } from '../quiz.js';
 import { h, esc, autocomplete, arrow, factsCard, distanceText } from '../ui/components.js';
 
@@ -10,13 +11,19 @@ const HINTS = [
   { id: 'region', label: 'Region', text: (t) => `It's in ${t.subregion || t.region}.` },
   { id: 'size', label: 'Size', text: (t) => `It covers about ${roundArea(t.area)} km²${t.landlocked ? ' and is landlocked' : ''}.` },
   { id: 'letter', label: 'First letter', text: (t) => `The name starts with “${t.name[0]}”.` },
-  { id: 'capital', label: 'Capital', text: (t) => `The capital is ${t.capital[0] || 'not defined'}.` },
 ];
 
 function roundArea(a) {
   if (a > 1e6) return `${(a / 1e6).toFixed(1)} million`;
   if (a > 1e4) return `${Math.round(a / 1000).toLocaleString()},000`;
   return Math.round(a).toLocaleString();
+}
+
+function untilMidnight() {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const mins = Math.max(1, Math.round((next - now) / 60000));
+  return mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
 }
 
 export class HuntMode {
@@ -31,6 +38,7 @@ export class HuntMode {
 
   unmount() {
     this.ac?.destroy();
+    clearInterval(this.timer);
   }
 
   onSettingsChange() {
@@ -38,41 +46,24 @@ export class HuntMode {
     this.updateGlobe();
   }
 
-  reset() {
+  startDaily() {
+    const { progress, world } = this.app;
     this.guesses = [];
     this.hints = [];
     this.done = false;
     this.won = false;
-    this.quiz = null; // { questions, answers: [index chosen], finished }
-  }
-
-  startDaily() {
-    const { progress, world } = this.app;
-    this.reset();
-    this.practice = false;
+    this.quiz = null; // { questions, answers: [chosen option], finished }
     this.dateKey = todayKey();
     this.target = dailyPick(world.pool({ region: 'world' }), this.dateKey);
     const saved = progress.getDaily(this.dateKey);
     if (saved && saved.id === this.target.id) {
       this.guesses = saved.list.map((id) => this.scoreGuess(world.get(id))).filter(Boolean);
-      this.hints = saved.hints || [];
+      this.hints = (saved.hints || []).filter((id) => HINTS.some((x) => x.id === id));
       this.done = saved.done;
       this.won = saved.won;
       this.quiz = saved.quiz || null;
     }
     if (this.won && !this.quiz) this.quiz = this.newQuiz();
-    this.begin();
-  }
-
-  startPractice() {
-    this.reset();
-    this.practice = true;
-    this.target = this.app.progress.pickNext('hunt', this.app.pool(), { avoid: this.recent || [] });
-    this.recent = [...(this.recent || []).slice(-10), this.target.id];
-    this.begin();
-  }
-
-  begin() {
     this.app.globe.autoRotate = !this.guesses.length;
     this.render();
     this.updateGlobe();
@@ -82,6 +73,10 @@ export class HuntMode {
   newQuiz() {
     const pool = this.app.world.pool({ includeTerritories: true });
     return { questions: buildQuiz(this.target, pool), answers: [], finished: false };
+  }
+
+  get score() {
+    return huntScore(this.guesses.length, this.hints.length);
   }
 
   scoreGuess(c) {
@@ -102,11 +97,7 @@ export class HuntMode {
     this.persist();
     this.render();
     this.updateGlobe();
-    if (!this.done) {
-      this.app.globe.flyToCountry(c);
-      const msg = g.km === 0 ? `${c.name} borders it!` : `${c.name}: ${distanceText(g.km, this.app.settings.units)} away, head ${compassPoint(g.bearing)}`;
-      this.app.toast(msg);
-    }
+    if (!this.done) this.app.globe.flyToCountry(c);
   }
 
   finish(won) {
@@ -118,15 +109,20 @@ export class HuntMode {
   }
 
   persist() {
-    if (this.practice) return;
+    const wasUnlocked = this.app.progress.isUnlocked();
     this.app.progress.setDaily(this.dateKey, {
       id: this.target.id,
       list: this.guesses.map((g) => g.country.id),
       hints: this.hints,
       done: this.done,
       won: this.won,
+      score: this.won ? this.score : null,
       quiz: this.quiz,
     });
+    if (!wasUnlocked && this.app.progress.isUnlocked()) {
+      this.unlockedNow = true;
+      this.app.refreshLocks();
+    }
   }
 
   useHint(id) {
@@ -138,7 +134,9 @@ export class HuntMode {
 
   giveUp() {
     if (this.done) return;
-    if (!confirm('Give up and reveal the country?')) return;
+    const streak = this.app.progress.currentStreak(this.dateKey);
+    const warn = streak ? `\n\nThis ends your ${streak}-day streak.` : '';
+    if (!confirm(`Give up and reveal today's country?${warn}`)) return;
     this.finish(false);
     this.persist();
     this.render();
@@ -196,6 +194,7 @@ export class HuntMode {
   render() {
     this.ac?.destroy();
     this.ac = null;
+    clearInterval(this.timer);
     this.panel.innerHTML = '';
     const q = this.quiz;
     // Reloaded after the last answer but before "See results": finish the quiz.
@@ -203,25 +202,49 @@ export class HuntMode {
       this.nextQuestion();
       return;
     }
-    if (!this.done) this.renderGuessing();
-    else if (this.won && this.quiz && !this.quiz.finished && this.quiz.questions.length) this.renderQuiz();
+    if (!this.done) return this.renderGuessing();
+    if (this.won && q && !q.finished && q.questions.length) this.renderQuiz();
     else this.renderDone();
-    this.renderGuessList();
+    this.panel.append(this.guessList({ collapsed: true }));
+  }
+
+  /** Guesses sorted closest first. The latest one is marked so you can spot it. */
+  guessList({ collapsed = false } = {}) {
+    const units = this.app.settings.units;
+    const latest = this.guesses[this.guesses.length - 1];
+    const sorted = [...this.guesses].sort((a, b) => a.km - b.km);
+    const ol = h('<ol class="guesses"></ol>');
+    for (const g of sorted) {
+      const win = g.country.id === this.target.id;
+      const neighbour = g.km === 0 && !win;
+      const isLatest = g === latest && !win && this.guesses.length > 1;
+      const li = h(`<li class="guess ${win ? 'win' : ''} ${isLatest ? 'latest' : ''}" title="${isLatest ? 'Latest guess. ' : ''}Show on globe">
+          <span class="chip" style="background:${heatColor(g.km)}"></span>
+          <span class="name">${g.country.flag || ''} ${esc(g.country.name)}${neighbour ? '<span class="tag">borders</span>' : ''}</span>
+          <span class="km">${win ? '' : distanceText(g.km, units)}</span>
+          ${win ? '<span>🎯</span>' : `<span title="Head ${compassPoint(g.bearing)}">${arrow(g.bearing)}</span>`}
+          <span class="pct">${g.pct}%</span>
+        </li>`);
+      li.addEventListener('click', () => this.app.globe.flyToCountry(g.country));
+      ol.append(li);
+    }
+    if (!collapsed) return ol;
+    const d = h(`<details class="card guess-details"><summary>Your guesses (${this.guesses.length})</summary></details>`);
+    d.append(ol);
+    return d;
   }
 
   renderGuessing() {
-    const units = this.app.settings.units;
-    const sorted = [...this.guesses].sort((a, b) => a.km - b.km);
-    const closest = sorted[0];
+    const n = this.guesses.length;
     const play = h(`<div class="card">
         <div class="row between" style="margin-bottom:8px">
-          <strong>${this.practice ? 'Practice' : 'Daily'} · guess ${this.guesses.length + 1}</strong>
-          <button class="btn ghost small" data-act="giveup">Give up</button>
+          <strong>Daily Hunt · guess ${n + 1}</strong>
+          ${this.hints.length ? `<span class="muted small">Score so far ${this.score}</span>` : ''}
         </div>
         ${
-          this.guesses.length
+          n
             ? ''
-            : `<p class="muted small" style="margin:0 0 10px">Find the mystery country. Each guess shows how far it is from the target, which way to head, and gets hotter the closer you are.</p>`
+            : `<p class="muted small" style="margin:0 0 10px">Find today's mystery country in as few guesses as you can. Each guess shows how far away it is and which way to head, and gets hotter the closer you are.</p>`
         }
       </div>`);
     this.ac = autocomplete({
@@ -230,33 +253,30 @@ export class HuntMode {
       onSubmit: (c, raw) => this.guess(c, raw),
     });
     play.append(this.ac.el);
-    if (closest) {
-      play.append(
-        h(`<div class="closest" style="margin-top:10px">
-            <span class="muted">Closest</span><strong>${esc(closest.country.name)}</strong>
-            <div class="meter"><span style="width:${closest.pct}%;background:${heatColor(closest.km)}"></span></div>
-            <span>${distanceText(closest.km, units)}</span>
-          </div>`),
-      );
+    if (n) {
+      const list = this.guessList();
+      list.style.marginTop = '10px';
+      play.append(list);
     }
-    play.append(
-      h(`<div style="margin-top:12px">
-          <div class="row"><span class="muted small">Stuck? Hints:</span>
-            <div class="hints">${HINTS.map(
-              (x) => `<button class="btn small" data-hint="${x.id}" ${this.hints.includes(x.id) ? 'disabled' : ''}>${x.label}</button>`,
-            ).join('')}</div>
-          </div>
-          <div class="hint-out">${this.hints
-            .map((id) => HINTS.find((x) => x.id === id))
-            .map((x) => `<div><b>${x.label}:</b> ${esc(x.text(this.target))}</div>`)
-            .join('')}</div>
-        </div>`),
-    );
-    play.addEventListener('click', (e) => {
+    const foot = h(`<div class="hunt-foot">
+        <div class="row">
+          <span class="muted small">Hints (+${HINT_COST} each):</span>
+          <div class="hints">${HINTS.map(
+            (x) => `<button class="btn small" data-hint="${x.id}" ${this.hints.includes(x.id) ? 'disabled' : ''}>${x.label}</button>`,
+          ).join('')}</div>
+        </div>
+        <div class="hint-out">${this.hints
+          .map((id) => HINTS.find((x) => x.id === id))
+          .map((x) => `<div><b>${x.label}:</b> ${esc(x.text(this.target))}</div>`)
+          .join('')}</div>
+        ${n ? '<div class="row end"><button class="btn ghost small" data-act="giveup">Give up</button></div>' : ''}
+      </div>`);
+    foot.addEventListener('click', (e) => {
       const hb = e.target.closest('[data-hint]');
       if (hb) this.useHint(hb.dataset.hint);
       if (e.target.closest('[data-act="giveup"]')) this.giveUp();
     });
+    play.append(foot);
     this.panel.append(play);
     setTimeout(() => this.ac?.autofocus(), 0);
   }
@@ -269,11 +289,10 @@ export class HuntMode {
     const showingFeedback = this._awaitingNext === n && n > 0;
     const idx = showingFeedback ? n - 1 : n;
     const q = questions[idx];
-    const g = this.guesses.length;
 
     const card = h(`<div class="card quiz">
         <div class="row between">
-          <span class="badge">🎯 Found ${esc(t.name)} in ${g} ${g === 1 ? 'guess' : 'guesses'}</span>
+          <span class="badge">🎯 Found ${esc(t.name)} · score ${this.score}</span>
           <span class="muted small">${idx + 1} of ${questions.length}</span>
         </div>
         <div class="quiz-steps">${questions
@@ -321,52 +340,59 @@ export class HuntMode {
   renderDone() {
     const { settings, progress, world } = this.app;
     const n = this.guesses.length;
-    const score = this.won ? this.quizScore() : null;
-    const streak = progress.state.streak;
-    const daily = !this.practice;
-    const result = h(`<div class="card">
-        <h2>${
+    const quiz = this.won ? this.quizScore() : null;
+    const streak = progress.currentStreak(this.dateKey);
+    const stats = progress.dailyStats();
+    const isBest = this.won && stats.best === this.score && stats.won > 1;
+    const breakdown = this.hints.length
+      ? `${n} ${n === 1 ? 'guess' : 'guesses'} + ${this.hints.length} hint${this.hints.length > 1 ? 's' : ''} × ${HINT_COST}`
+      : `${n} ${n === 1 ? 'guess' : 'guesses'}, no hints`;
+    const result = h(`<div class="card result">
+        ${
           this.won
-            ? `Found it in ${n} ${n === 1 ? 'guess' : 'guesses'}${this.hints.length ? ` with ${this.hints.length} hint${this.hints.length > 1 ? 's' : ''}` : ''}`
-            : `It was ${esc(this.target.name)}`
-        }</h2>
-        ${score && score.total ? `<p style="margin:0 0 8px">Fact quiz: <strong>${score.right}/${score.total}</strong></p>` : ''}
-        ${daily ? `<p class="muted small" style="margin:0 0 10px">Daily streak ${streak.current} · best ${streak.best}. A new country arrives tomorrow.</p>` : ''}
-        <div class="row">
-          <span class="spacer"></span>
-          ${daily ? '<button class="btn" data-act="copy">Copy result</button>' : '<button class="btn" data-act="daily">Back to daily</button>'}
-          <button class="btn primary" data-act="practice">${daily ? 'Practice round' : 'Another one'}</button>
+            ? `<div class="score-row">
+                <div class="big-score">${this.score}</div>
+                <div><div class="score-title">${isBest ? 'New best score!' : 'Today’s score'}</div>
+                  <div class="muted small">${breakdown}. Lower is better.</div></div>
+              </div>`
+            : `<h2>It was ${esc(this.target.name)}</h2>`
+        }
+        <div class="mini-stats">
+          <div><b>${streak}</b><span>Streak</span></div>
+          <div><b>${progress.state.streak.best}</b><span>Best streak</span></div>
+          <div><b>${stats.best ?? '-'}</b><span>Best score</span></div>
+          ${quiz && quiz.total ? `<div><b>${quiz.right}/${quiz.total}</b><span>Fact quiz</span></div>` : ''}
         </div>
+        <p class="muted small" style="margin:10px 0">Next country in <span data-countdown>${untilMidnight()}</span>.</p>
+        <div class="row end"><button class="btn" data-act="copy">Copy result</button></div>
       </div>`);
     result.addEventListener('click', (e) => {
-      if (e.target.closest('[data-act="practice"]')) this.startPractice();
-      if (e.target.closest('[data-act="daily"]')) this.startDaily();
       if (e.target.closest('[data-act="copy"]')) this.copyResult();
     });
     this.panel.append(result);
-    this.panel.append(factsCard(this.target, world, { units: settings.units, onCountry: (c) => this.app.globe.flyToCountry(c) }));
-  }
+    this.timer = setInterval(() => {
+      const el = result.querySelector('[data-countdown]');
+      if (el) el.textContent = untilMidnight();
+      if (todayKey() !== this.dateKey) this.startDaily();
+    }, 30000);
 
-  renderGuessList() {
-    const units = this.app.settings.units;
-    const sorted = [...this.guesses].sort((a, b) => a.km - b.km);
-    if (!sorted.length) return;
-    const list = h(`<div class="card"><h3>Guesses (closest first)</h3><ol class="guesses"></ol></div>`);
-    const ol = list.querySelector('ol');
-    for (const g of sorted) {
-      const win = g.country.id === this.target.id;
-      const neighbour = g.km === 0 && !win;
-      const li = h(`<li class="guess ${win ? 'win' : ''}" title="Show on globe">
-          <span class="chip" style="background:${heatColor(g.km)}"></span>
-          <span class="name">${g.country.flag || ''} ${esc(g.country.name)}${neighbour ? '<span class="tag">neighbour</span>' : ''}</span>
-          <span class="km">${win ? '' : distanceText(g.km, units)}</span>
-          ${win ? '<span>🎯</span>' : `<span title="Head ${compassPoint(g.bearing)}">${arrow(g.bearing)}</span>`}
-          <span class="pct">${g.pct}%</span>
-        </li>`);
-      li.addEventListener('click', () => this.app.globe.flyToCountry(g.country));
-      ol.append(li);
+    if (this.unlockedNow) {
+      this.unlockedNow = false;
+      const u = h(`<div class="card unlock">
+          <h2>New modes unlocked</h2>
+          <p class="muted small" style="margin:0 0 10px">Practise any time while you wait for tomorrow's country.</p>
+          <div class="row">
+            <button class="btn primary" data-go="locate">Finder: tap the country</button>
+            <button class="btn primary" data-go="name">Name: name the country</button>
+          </div>
+        </div>`);
+      u.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-go]');
+        if (b) this.app.switchMode(b.dataset.go);
+      });
+      this.panel.append(u);
     }
-    this.panel.append(list);
+    this.panel.append(factsCard(this.target, world, { units: settings.units, onCountry: (c) => this.app.globe.flyToCountry(c) }));
   }
 
   copyResult() {
@@ -374,9 +400,12 @@ export class HuntMode {
       if (g.country.id === this.target.id) return '🎯';
       return g.pct > 95 ? '🟥' : g.pct > 85 ? '🟧' : g.pct > 70 ? '🟨' : '⬜';
     });
-    const score = this.won ? this.quizScore() : null;
-    const quizLine = score && score.total ? `\nFacts ${score.right}/${score.total} ${this.quiz.answers.map((a, i) => (a === this.quiz.questions[i].answer ? '✅' : '❌')).join('')}` : '';
-    const text = `Globe Trainer ${this.dateKey}: ${this.won ? `${this.guesses.length} guesses` : 'X'}${this.hints.length ? ` (${this.hints.length} hints)` : ''}\n${rows.join('')}${quizLine}`;
+    const quiz = this.won ? this.quizScore() : null;
+    const head = this.won ? `score ${this.score}${this.hints.length ? ` (${this.hints.length} hint${this.hints.length > 1 ? 's' : ''})` : ''}` : 'X';
+    const quizLine =
+      quiz && quiz.total ? `\nFacts ${quiz.right}/${quiz.total} ${this.quiz.answers.map((a, i) => (a === this.quiz.questions[i].answer ? '✅' : '❌')).join('')}` : '';
+    const streak = this.app.progress.currentStreak(this.dateKey);
+    const text = `Globe Trainer ${this.dateKey}: ${head}${streak > 1 ? ` · ${streak}-day streak` : ''}\n${rows.join('')}${quizLine}`;
     navigator.clipboard?.writeText(text).then(
       () => this.app.toast('Result copied'),
       () => this.app.toast(text),
