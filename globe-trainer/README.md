@@ -29,6 +29,8 @@ Once you find it, a four-question fact quiz: capital, population, language and c
 
 After every round you get a fact card: flag, capital, population, region, area, languages, currency, and clickable neighbours to explore.
 
+Move the globe with gestures: drag to spin, pinch (or scroll on a computer) to zoom.
+
 On phones the country input opens a full-screen picker that sits above the keyboard, with large rows and flags.
 
 ## How the training works

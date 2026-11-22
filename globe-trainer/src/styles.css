@@ -87,7 +87,6 @@ button, input, select { font: inherit; color: inherit; }
 }
 #globe { touch-action: none; cursor: grab; display: block; }
 #globe:active { cursor: grabbing; }
-.globe-controls { position: absolute; right: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
 
 .panel {

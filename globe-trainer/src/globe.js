@@ -9,7 +9,7 @@ const THEME = {
   outline: 'rgba(160, 200, 255, 0.35)',
   label: '#ffffff',
   labelHalo: 'rgba(0, 0, 0, 0.75)',
-  tinyDot: 'rgba(60, 50, 40, 0.55)',
+  tinyRing: 'rgba(255, 255, 255, 0.45)',
 };
 
 /**
@@ -28,7 +28,7 @@ export class Globe {
     this.rotation = [-10, -20, 0];
     this.zoom = 1;
     this.styles = new Map(); // id -> { fill, stroke, label, pulse }
-    this.options = { borders: true, tinyDots: true, labels: true, land: true };
+    this.options = { borders: true, tinyDots: false, labels: true, land: true };
     this.autoRotate = true;
     this._anim = null;
     this._raf = null;
@@ -172,24 +172,28 @@ export class Globe {
       ctx.stroke();
     }
 
-    // Dots for tiny countries, so they can be seen and clicked
+    // Markers for countries too small to see at this zoom. Coloured countries
+    // (guesses, answers) always get one; plain ones only when the mode asks for
+    // it (Finder, so they can be tapped), drawn as faint rings.
     const pulse = (Math.sin(performance.now() / 250) + 1) / 2;
     let needsPulse = false;
     for (const c of this.world.countries) {
-      if (!c.tiny || !this._isVisible(c.center)) continue;
+      if (!this._hasMarker(c)) continue;
       const s = this.styles.get(c.id);
-      if (!s && !this.options.tinyDots) continue;
       const [x, y] = projection(c.center);
-      const r = s ? 4 + Math.min(3, this.zoom) : 2 + Math.min(2, this.zoom / 2);
       ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle = s?.fill || THEME.tinyDot;
-      ctx.fill();
       if (s) {
+        ctx.arc(x, y, 4 + Math.min(3, this.zoom), 0, Math.PI * 2);
+        ctx.fillStyle = s.fill || THEME.land;
+        ctx.fill();
         ctx.strokeStyle = s.stroke || 'rgba(0,0,0,0.6)';
         ctx.lineWidth = 1.2;
-        ctx.stroke();
+      } else {
+        ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+        ctx.strokeStyle = THEME.tinyRing;
+        ctx.lineWidth = 1;
       }
+      ctx.stroke();
     }
 
     // Pulsing ring for highlighted targets
@@ -235,15 +239,27 @@ export class Globe {
     if (needsPulse) this._dirty = true;
   }
 
+  /** True when a country is under ~3px across on screen right now. */
+  _isTooSmall(c) {
+    if (c.pointOnly) return true;
+    const px = Math.sqrt(c.angularArea / Math.PI) * this.projection.scale();
+    return px < 3;
+  }
+
+  _hasMarker(c) {
+    if (!c.tiny || !this._isVisible(c.center) || !this._isTooSmall(c)) return false;
+    return this.styles.has(c.id) || this.options.tinyDots;
+  }
+
   /** Country under a canvas-relative point, or null. */
   pick(x, y) {
     const lonlat = this.projection.invert([x, y]);
     if (!lonlat || Number.isNaN(lonlat[0]) || !this._isVisible(lonlat)) return null;
-    // Tiny-country dots first, by screen distance.
+    // Small-country markers first, by screen distance.
     let best = null;
     let bestD = 12;
     for (const c of this.world.countries) {
-      if (!c.tiny || !this._isVisible(c.center)) continue;
+      if (!this._hasMarker(c)) continue;
       const [cx, cy] = this.projection(c.center);
       const d = Math.hypot(cx - x, cy - y);
       if (d < bestD) {

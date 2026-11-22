@@ -68,6 +68,11 @@ export class HuntMode {
     this.render();
     this.updateGlobe();
     if (this.done) this.app.globe.flyToCountry(this.target);
+    // Fresh start: show the whole globe.
+    else if (!this.guesses.length) {
+      this.app.globe.flyTo(this.app.globe._viewCenter(), 1, 600);
+      this.app.globe.autoRotate = true;
+    }
   }
 
   newQuiz() {

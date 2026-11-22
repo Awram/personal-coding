@@ -32,7 +32,15 @@ async function start() {
   const globe = new Globe(document.getElementById('globe'), world, {
     onPick: (c) => current?.onPick?.(c),
   });
-  globe.setOptions({ borders: settings.borders, tinyDots: settings.tinyDots, labels: settings.labels });
+  // Small-country markers only help in Finder, where you tap countries.
+  let currentMode = 'hunt';
+  const applyGlobeOptions = () =>
+    globe.setOptions({
+      borders: settings.borders,
+      labels: settings.labels,
+      tinyDots: currentMode === 'locate' && settings.tinyDots,
+    });
+  applyGlobeOptions();
 
   const toastEl = document.getElementById('toast');
   let toastTimer;
@@ -64,6 +72,8 @@ async function start() {
 
   function switchMode(name) {
     if (!progress.isUnlocked()) name = 'hunt';
+    currentMode = name;
+    applyGlobeOptions();
     current?.unmount?.();
     panel.innerHTML = '';
     globe.setStyles(new Map());
@@ -76,16 +86,6 @@ async function start() {
   document.querySelector('.tabs').addEventListener('click', (e) => {
     const b = e.target.closest('[data-mode]');
     if (b) switchMode(b.dataset.mode);
-  });
-
-  // Zoom controls
-  document.querySelector('.globe-controls').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-zoom]');
-    if (!b) return;
-    globe.stopAutoRotate();
-    if (b.dataset.zoom === 'in') globe.setZoom(globe.zoom * 1.4);
-    else if (b.dataset.zoom === 'out') globe.setZoom(globe.zoom / 1.4);
-    else globe.flyTo(globe._viewCenter(), 1, 500);
   });
 
   // Settings dialog
@@ -108,6 +108,7 @@ async function start() {
     progress.setSetting('app', settings);
     dialog.close();
     refreshLocks();
+    globe.flyTo([10, 20], 1, 700);
     switchMode('hunt');
     toast('History cleared. Welcome back to day one.');
   });
@@ -119,7 +120,7 @@ async function start() {
       settings[k] = field.type === 'checkbox' ? field.checked : field.value;
     }
     progress.setSetting('app', settings);
-    globe.setOptions({ borders: settings.borders, tinyDots: settings.tinyDots, labels: settings.labels });
+    applyGlobeOptions();
     if (JSON.stringify(settings) !== before) current?.onSettingsChange?.();
   });
 
